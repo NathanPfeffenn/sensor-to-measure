@@ -143,16 +143,27 @@ void loop() {
 }
 
 ```
+## Réalisation du montage
 
-ce premier saulette de code nous a permis d'avoir une idée générale du fonctionnement de l'algorithme. Nénamoins il n'est pas du tout complet et a du évoluer un certain nombre de fois. les précédentes versions du code sont disponible sur ce dépot git : ()
+### Valeur de la résistance
 
-les principaux points de problèmes rencontés ont été les suivants :
+Le montage réalisé est un montage émetteur-collecteur avec la résistance à la masse. Pour choisir la valeur de la résistance nous utilisé l’ampérage donné dans la partie lecture de la Datasheet de notre rapport.
+Cette résistance est obligatoire pour ne pas avoir de court-circuit quand le transistor est saturé.
+On a comme calcul :
 
-	-Une mauvaise réception du signal. Nous souhaitions récupérer le changement d'état ud signal en un tour de boucle. ce type de réceptions nous donnait des valeurs aléatoires 
-	
-	-La récupération d'un changement d'état uniquement lors du front montant.  
+*I = U/R avec U = tension d’alimentation – tension de saturation (donnée dans la datasheet)*
 
-	-
+*I =  (5 – 0.40)/R*
+
+Nous avons décidé de prendre une résistance R de valeur une valeur *R = 1,5 KOhm* pour avoir une intensité égale à 3,06mA, qui se place au centre entre les valeurs minimums et maximums d’intensité données dans la datasheet *(min = 2.35mA , max = 3.85mA)*
+
+[Montage réalisé](20180406_143152.jpg "circuit réalisé)
+
+
+  	
+
+
+
 
 \fakesection{Annexes}
 \includepdf[pages={1-3}]{OP599_Series_datasheet_annotee.pdf}
