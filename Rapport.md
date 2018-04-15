@@ -157,13 +157,189 @@ On a comme calcul :
 
 Nous avons décidé de prendre une résistance R de valeur une valeur *R = 1,5 KOhm* pour avoir une intensité égale à 3,06mA, qui se place au centre entre les valeurs minimums et maximums d’intensité données dans la datasheet *(min = 2.35mA , max = 3.85mA)*
 
-[Montage réalisé](20180406_143152.jpg "circuit réalisé)
+[Montage réalisé](20180406_143152.jpg)
+
+### Première Version du code
+
+Après avoir fini la conception de la cahine de mesure, nous avons voulu repartir de m'algorithme en pseudo code. Mais après une scéanc infructueuse de 3heures, nous nous sommes rendu compte que ce squelette comprenait trop d'erreurs et n'était pas assez "propre" (tout codé dans la loop, des noms de variable peu claire). De plus nous souhaitions récupérer et traiter les valeurs immédiatement tout en affichant des résultats à l'écran. Mais avec la lenteur de l'écriture sérial et les erreurs de conception, nous n'avions que des valeurs érronées et dures à analyser.
+
+Nous avons donc décidé de changer l'algorithme et de raprtir depuis un fichier vierge.
 
 
-  	
+### Seconde version du code
+
+#### déclaration des variables
+
+```c
+define IP 7 // Input pin
+
+#define WAIT 0 // Waiting for start condition
+#define LISTEN 1 // Listening for first byte
+#define STOP 2 // Message recorded, sending
+
+
+unsigned long t; // Valeur de  temps
+
+int res = 0; /// valeur de l'écart
+
+///ascii tableau de caratère ascii caractère ASCII
+byte currentByte = 0;
+char currentBit = 0;
+unsigned int sum;
+int timeStore[8];
+
+char finalBytes[20]; /// tabelau final pour les caractères
+char finalCount = 0;
+
+int i = 0;
+
+int j= 0;
+int k= 0;
+int count =0;
+
+char val = 0;
+char prev=0;
+
+char updt=0;
+
+unsigned long lastUpdtTime=0;
+unsigned long updtTime=0;
+```
+#### Le setup
+
+Nous avons accéléré le datarate (donné en paramètre de sérial.begin()) pour pallier les problèmes rencontrés avec la première version du code
+
+```c
+void setup() {
+// Input mode for the pin which will receive the signal Inpin
+pinMode(IP, INPUT);
+Serial.begin(115200);
+}
+```
+#### La réception du signal
+
+La première étape de la réception est la détection des fronts montants et descandants (commentées dans lecode ci-dessous) 
+On récupère dans *res* la différence entre le front descandant et front montant, ce qui nous donne le temps durant lequel le signal est à un avant de repasser à zéro.
+```c 
+
+void loop() {
+
+  val = digitalRead(IP); // Getting the state of input pin
+  
+  if(val && !prev){ // If IP state changed from 0 to 1
+    prev = 1; // Update the current state (future PREVious state)
+    t = micros(); // Take time measure
+  }
+  if(!val && prev) // If it switched back from 1 to 0
+  {
+    prev = 0; // Update current state
+    res = micros() - t; // Store the "HIGH" duration
+    updt=1; // Tell the rest of the program that a new info has arrived
+    lastUpdtTime = millis();
+  }
+  if((0 != lastUpdtTime) && (WAIT != state)){
+      updtTime = millis() - lastUpdtTime;
+  }
+```
 
 
 
+Cette portion de code permet de détecter le message de fin (un temps long sans front montant détecté).
 
+```c
+  if (updtTime > 6) {
+    state = STOP;
+  }
+ ```
+ #### Le traitement du signal
+ 
+ On détecte la condition de départ
+ 
+ ```c
+  if (updt || (STOP == state)) { // Start processing
+
+    if( (res > 280) && (res < 420) ){ // Start condition
+      state = LISTEN;
+      updt = 0;
+    }
+```
+Une fois la condition détectée, et que la réception du signal renvoie une valeur alors on appelle timetobite() la fonction chargée de la traduction 
+
+```c
+    if ((LISTEN == state) && (1 == updt)){
+      if(timeToByte(res)){
+        finalBytes[finalCount] = currentByte;
+        finalCount++;
+      }
+    }
+```
+
+#### La traducion du signal
+
+Pour la traduction, la première étape est de stocker les 8 temps recus, correspondant au 8bits d'un mots dans un tableau. On additionne les temps envoyés pour avoir le temps total du mot. 
+```c
+bool timeToByte(unsigned int time) {
+
+  timeStore[currentBit] = time; // Storing current time for translation
+  currentBit++;
+
+  sum += time;
+```
+Si on a les 8 temps, on va diviser chaque temps par la somme. Si ce temps est infrieur à la durée d'un temps moyen, *Somme/8*, alors c'est un 1 (signal court). Sinon c'est un 0 (signal long). On écrit alors directement dans la caractère le bit reçu à l'aide d'opération binaires :
+- Si c'est un 0, on opère un décalage à droite (on ajoute un 0 sur le lsb et le msb est remplacé par le secon bit) *currentByte = currentByte << 1;*
+- Si c'est un 1, on opère un décalage à droite et on fait un complément pour changer le LSB à 1 *currentByte = currentByte << 1;
+
+currentByte = currentByte | B00000001;*
+on aura alors la caractère rempli. 
+On répète l'action pour chaque caractère et on botiendra le message.
+
+Cette traduction ne marche uniquement car la table ASCII ne comporte pas de caractères avec que des 1 ou que des 0. Sinon le temps moyen *Somme/8*, serait égal à chaque temps reçu et il serait impossible de déterminer les 0 et les 1.
+
+```c
+  if(currentBit == 8) {
+    
+    currentByte = 0;
+    sum = sum/8;
+
+    for(currentBit = 0; currentBit < 8; currentBit++) {
+      // Remark : no ASCII character is all 0 or all 1
+      if(timeStore[currentBit] < sum) { // HIGH
+        currentByte = currentByte << 1;
+        currentByte = currentByte | B00000001;
+      }
+      else { // LOW
+        currentByte = currentByte << 1;
+      }
+    }
+    currentBit = 0;
+    sum = 0;
+    return 1;
+  }
+  else
+    return 0;
+}
+```
+
+#### L'affichage du signal
+
+Cette partie permet l'affichage du mot
+
+```c
+    if(STOP == state) {
+
+      finalBytes[finalCount] = '\0';
+      Serial.print("Message is : ");
+      Serial.println(finalBytes);
+      Serial.println("");
+```
+Cette partie est un blindage ajouté après la détection d'une erreur lors d'une mauvaise lecture du à un mouvement brusque de l'émetteur
+```c
+      // Hardenning: in case of misreading, start over
+      finalCount = 0;
+      currentBit = 0;
+      currentByte = 0;
+      sum = 0;
+```
+     
 \fakesection{Annexes}
 \includepdf[pages={1-3}]{OP599_Series_datasheet_annotee.pdf}
