@@ -157,7 +157,7 @@ On a comme calcul :
 
 Nous avons décidé de prendre une résistance R de valeur une valeur *R = 1,5 KOhm* pour avoir une intensité égale à 3,06mA, qui se place au centre entre les valeurs minimums et maximums d’intensité données dans la datasheet *(min = 2.35mA , max = 3.85mA)*
 
-[Montage réalisé](20180406_143152.jpg)
+![Montage réalisé](20180406_143152.jpg, "montage réalisé")
 
 ### Première Version du code
 
@@ -340,6 +340,28 @@ Cette partie est un blindage ajouté après la détection d'une erreur lors d'un
       currentByte = 0;
       sum = 0;
 ```
+
+### Le fichier binaire de l'émetteur
+
+Après une mauvaise manipulation, nous avions téléverser le code tu récepteur sur la nano du module émetteur. Nous avons donc du récupérer le fichier binaire d'un autre émetteur pour réparer notre émetteur.
+
+Nous en avons profiter pour ouvrir le fichier binaire de l'émetteur. Nous en avons profiter pour vérifier que le mot décodé par le groupe d'Hugo Massis était bien "Attaboy !". 
+
+![Le message à décoder](attaboy.png "message à décoder")
+
+Nous avons aussi pu changer le message émis pour des tests de notre code. Notamment les caractères avec un seul *0* ou un seul *1* dans leur code binaire dans la table ascii. 
+
+![Le message à décoder](HACKED.png "message changé")
+
+### Résultat
+
+Voilà le screenshit du résultat obtenu avec l'émetteur classique et l'émetteur changé
+
+![Le résultat obtenu](cutecom_2.png "Le résultat obtenu")	
+
+## Les groupes qui nous ont aidé
+
+Le groupe de Hugo Massis nous a fourni le message décodé ce qui nous a beacoup aisdé pour les tests du code
      
 \fakesection{Annexes}
 \includepdf[pages={1-3}]{OP599_Series_datasheet_annotee.pdf}
